@@ -12,7 +12,7 @@
 #define MAX_ARG_LEN  20 
 
 #define ADDR_TEXT    0x00400000 
-#define TEXT_POS(a)  ((a==ADDR_TEXT)?(0):(a - ADDR_TEXT)/4)
+#define TEXT_POS(a)  ((a==ADDR_TEXT)?(0):(a - ADDR_TEXT)/4) //Can be used to access text[]
 
 const char *register_str[] = {	"$zero", 
 				"$at",
@@ -37,7 +37,7 @@ typedef int (*opcode_function)(unsigned int, unsigned int*, char*, char*, char*,
 
 char prog[MAX_PROG_LEN][MAX_LINE_LEN];
 int prog_len=0;
-
+int realPC = 0;
 
 int print_registers(){
 	int i;
@@ -45,7 +45,7 @@ int print_registers(){
 	for(i=0;i<MAX_REGISTER;i++){
 		printf(" %d: %d\n", i, registers[i]); 
 	}
-	printf(" Program Counter: 0x%08x\n", pc);
+	printf(" Program Counter: 0x%08x\n",ADDR_TEXT + 4*(realPC-1));
 	return(0);
 }
 
@@ -149,18 +149,20 @@ const char *opcode_str[] = {"nop", "add", "addi", "andi", "beq", "bne", "srl", "
 opcode_function opcode_func[] = {&opcode_nop, &opcode_add, &opcode_addi, &opcode_andi, &opcode_beq, &opcode_bne, &opcode_srl, &opcode_sll};
 
 int make_bytecode(){
-	unsigned int bytecode;
+		unsigned int bytecode;
        	int j=0;
        	int i=0;
 
-	char label[MAX_ARG_LEN+1];   //21
-	char opcode[MAX_ARG_LEN+1];	 //21
+		char label[MAX_ARG_LEN+1];   //21
+		char opcode[MAX_ARG_LEN+1];	 //21
         char arg1[MAX_ARG_LEN+1];//21
         char arg2[MAX_ARG_LEN+1];//21
         char arg3[MAX_ARG_LEN+1];//21
 
        	printf("ASSEMBLING PROGRAM ...\n");
+
 	while(j<prog_len){
+		//Memory allocation		
 		memset(label,0,sizeof(label)); 
 		memset(opcode,0,sizeof(opcode)); 
 		memset(arg1,0,sizeof(arg1)); 
@@ -192,40 +194,296 @@ int make_bytecode(){
 					return(-1);
 				}
 				else {
+					//Printf memory address + 4*j as increments in 4 bytes
+					//and bytecode from operation assembler
 					printf("0x%08x 0x%08x\n",ADDR_TEXT + 4*j, bytecode);
 					text[j] = bytecode;
-                               		break;
+                    break;
 				}
                 	}
 			if(i==(MAX_OPCODE-1)) {
 				printf("ERROR: line %d unknown opcode\n", j);
 				return(-1);
 			}
-        	}
+        }
 		j++;
-       	}
-       	printf("... DONE!\n");
-       	return(0);
+    }
+    printf("... DONE!\n");
+   	return(0);
 }
 
+//Variable to hold current instructions 
+int currentInstructionRegister;
+//Variable to hold memory addresses from program counter
+int memoryAddressRegister;
+//Variable to hold the data in the memory adresss register
+int memoryDataRegister;
+
+//R TYPE
+void rTypeInstruction()
+{
+	//SHIFT LEFT INSTRUCTION
+	if((memoryDataRegister & 0b00000000000000000000000000111111) == 0)
+	{		
+		unsigned int rt;
+		unsigned int rd;
+		unsigned int sa;
+		//Find rt
+		for(int i = 0; i < 32; i++)
+		{
+			if(((memoryDataRegister >> 16) & 0b00000000000000000000000000011111)== i)
+			{
+				rt = i;
+			}	
+		}
+		//Find rd
+		for(int i = 0; i < 32; i++)
+		{
+			if(((memoryDataRegister >> 11) & 0b00000000000000000000000000011111)== i)
+			{
+				rd = i;
+			}	
+		}
+		//Calculate shift amount
+		sa = ((memoryDataRegister >> 6) & 0b00000000000000000000000000011111);
+		//perform shift
+		registers[rd] = registers[rt] << sa;
+	}
+	//ADD INSTRUCTION
+	else if((memoryDataRegister & 0b00000000000000000000000000111111) == 0b00000000000000000000000000100000)
+	{		
+		unsigned int rs;
+		unsigned int rt;
+		unsigned int rd;
+		//Find rs
+		for(int i = 0; i < 32; i++)
+		{
+			if(((memoryDataRegister >> 21) & 0b00000000000000000000000000011111)== i)
+			{
+				rs = i;
+			}	
+		}
+		//Find rt
+		for(int i = 0; i < 32; i++)
+		{
+			if(((memoryDataRegister >> 16) & 0b00000000000000000000000000011111)== i)
+			{
+				rt = i;
+			}	
+		}
+		//Find rd
+		for(int i = 0; i < 32; i++)
+		{
+			if(((memoryDataRegister >> 11) & 0b00000000000000000000000000011111)== i)
+			{
+				rd = i;
+			}	
+		}
+		//Perform addition 
+		registers[rd] = registers[rs] + registers[rt];
+	}
+	//SHIFT RIGHT INSTRUCTION
+	else
+	{		
+		unsigned int rt;
+		unsigned int rd;
+		unsigned int sa;
+		//Find rt
+		for(int i = 0; i < 32; i++)
+		{
+			if(((memoryDataRegister >> 16) & 0b00000000000000000000000000011111)== i)
+			{
+				rt = i;
+			}	
+		}
+		//Find rd
+		for(int i = 0; i < 32; i++)
+		{
+			if(((memoryDataRegister >> 11) & 0b00000000000000000000000000011111)== i)
+			{
+				rd = i;
+			}	
+		}
+
+		//Calculate shift amount
+		sa = ((memoryDataRegister >> 6) & 0b00000000000000000000000000011111);
+		//Perform shift
+		registers[rd] = registers[rt] >> sa;
+
+	}
+}
+
+//I TYPE
+void iTypeInstruction()
+{
+	//ADDI Instruction
+	if((memoryDataRegister & 0b11111100000000000000000000000000) == 0b00100000000000000000000000000000)
+	{		
+		unsigned int rs;
+		unsigned int rt;
+		//Find rs
+		for(int i = 0; i < 32; i++)
+		{
+			if(((memoryDataRegister >> 21) & 0b00000000000000000000000000011111)== i)
+			{
+				rs = i;
+			}	
+		}
+		//Find rt
+		for(int i = 0; i < 32; i++)
+		{
+			if(((memoryDataRegister >> 16) & 0b00000000000000000000000000011111)== i)
+			{
+				rt = i;
+			}	
+		}
+		//Set immediate Value
+		unsigned int immediate = (memoryDataRegister & 0b00000000000000001111111111111111);
+		
+		//RT = RS + IMMEDIATE
+		registers[rt] = registers[rs] + immediate;
+	}
+	//BNE INSTRUCTION
+	else if((memoryDataRegister & 0b11111100000000000000000000000000) == 0b00010100000000000000000000000000)
+	{		
+		unsigned int rs;
+		unsigned int rt;
+		//Find rs
+		for(int i = 0; i < 32; i++)
+		{
+			if(((memoryDataRegister >> 21) & 0b00000000000000000000000000011111)== i)
+			{
+				rs = i;
+			}	
+		}
+		//Find rt
+		for(int i = 0; i < 32; i++)
+		{
+			if(((memoryDataRegister >> 16) & 0b00000000000000000000000000011111)== i)
+			{
+				rt = i;
+			}	
+		}
+		//Set immediate Value
+		int offset = (memoryDataRegister & 0b00000000000000001111111111111111);
+		
+		//if rs ! = rs then jump to pc - (offset + 1)
+		if(registers[rt] != registers[rs])
+		{
+			realPC -= (offset ^ 0b00000000000000001111111111111111)+1;
+		} 
+	}
+	//ANDI INSTRUCTION
+	else if((memoryDataRegister & 0b11111100000000000000000000000000) == 0b00110000000000000000000000000000)
+	{		
+		unsigned int rs;
+		unsigned int rt;
+		//Find rs
+		for(int i = 0; i < 32; i++)
+		{
+			if(((memoryDataRegister >> 21) & 0b00000000000000000000000000011111)== i)
+			{
+				rs = i;
+			}	
+		}
+		//Find rt
+		for(int i = 0; i < 32; i++)
+		{
+			if(((memoryDataRegister >> 16) & 0b00000000000000000000000000011111)== i)
+			{
+				rt = i;
+			}	
+		}
+		//Set immediate Value
+		unsigned int immediate = (memoryDataRegister & 0b00000000000000001111111111111111);
+		
+		//RT = RS AND IMMEDIATE
+		registers[rt] = registers[rs] & immediate;
+	}
+	//BEQ INSTRUCTION
+	else
+	{		
+		unsigned int rs;
+		unsigned int rt;
+		//Find rs
+		for(int i = 0; i < 32; i++)
+		{
+			if(((memoryDataRegister >> 21) & 0b00000000000000000000000000011111)== i)
+			{
+				rs = i;
+			}	
+		}
+		//Find rt
+		for(int i = 0; i < 32; i++)
+		{
+			if(((memoryDataRegister >> 16) & 0b00000000000000000000000000011111)== i)
+			{
+				rt = i;
+			}	
+		}
+		//Set offset Value
+		int offset = (memoryDataRegister & 0b00000000000000001111111111111111);
+		
+		//IF EQUAL BRANCH to pc + offset
+		if(registers[rt] == registers[rs])
+		{
+			realPC+=offset;
+		} 
+	}
+}
+
+//Control unit to calculate istruction type
+void controlUnit()
+{	
+	//If the current instruction IS opcode 000000, it is an R type instruction
+	if((memoryDataRegister & 0b11111100000000000000000000000000) == 0)
+	{		
+		rTypeInstruction();
+	}
+	//If not it must be I as we aren't using J types in this example
+	else
+	{		
+		iTypeInstruction();
+	}	
+}
+
+//WRITE METHOD
 int exec_bytecode(){
         printf("EXECUTING PROGRAM ...\n");
         pc = ADDR_TEXT; //set program counter to the start of our program
-
-        printf("... needs implementing!\n");
-
-        //here goes the code to run the byte code
+        //PC+=4 to increment program counter
         
+       
+        //here goes the code to run the byte code
+        //While the program counter has not yet reached the end of the program
+        while(realPC < prog_len)
+        {
+        	//Print line of execution
+        	printf("Executing 0x%08x 0x%08x\n",ADDR_TEXT + 4*realPC,text[realPC]);
 
+        	//Set memory address register to the address of the next instruction (PC)        	
+        	memoryAddressRegister = realPC;
 
+        	//Set memory data register to the contents of that memory address at PC (FETCHING INSTRUCTION)
+        	memoryDataRegister = text[realPC];
+
+        	//Now instruction has been fetched
+        	currentInstructionRegister = memoryDataRegister;
+
+        	//Increment Program Counter to point at the next instrcution to be fetched
+        	realPC++;
+
+        	controlUnit();
+        }       
 
 
        //print_registers(); // print out the state of registers at the end of execution
-
+        print_registers();
         printf("... DONE!\n");
         return(0);
-
 }
+
+
 
 
 int load_program(){
