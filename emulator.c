@@ -212,8 +212,11 @@ int make_bytecode(){
    	return(0);
 }
 
+//Variable to hold contents of current instruction
 int currentInstructionRegister;
+//Variable to hold address of current instruction
 int memoryAddressRegister;
+//Variable to hold data of current instruction
 int memoryDataRegister;
 
 //R TYPE
@@ -222,28 +225,31 @@ void rTypeInstruction()
 	//SHIFT LEFT INSTRUCTION
 	if((memoryDataRegister & 0b00000000000000000000000000111111) == 0)
 	{		
+		//Assign RT, RD, Shift Amount by using shifts then anding the last 5 bits
 		unsigned int rt = ((memoryDataRegister >> 16) & 0b00000000000000000000000000011111);
 		unsigned int rd = ((memoryDataRegister >> 11) & 0b00000000000000000000000000011111);
 		unsigned int sa = ((memoryDataRegister >> 6) & 0b00000000000000000000000000011111);
-
+		//Perform left shift
 		registers[rd] = registers[rt] << sa;
 	}
 	//ADD INSTRUCTION
 	else if((memoryDataRegister & 0b00000000000000000000000000111111) == 0b00000000000000000000000000100000)
 	{		
+		//Assign RT, RD, RS by using shifts then anding the last 5 bits
 		unsigned int rs = ((memoryDataRegister >> 21) & 0b00000000000000000000000000011111);
 		unsigned int rt = ((memoryDataRegister >> 16) & 0b00000000000000000000000000011111);
 		unsigned int rd = ((memoryDataRegister >> 11) & 0b00000000000000000000000000011111);
-		
+		//Perform addition
 		registers[rd] = registers[rs] + registers[rt];
 	}
 	//SHIFT RIGHT INSTRUCTION
 	else
-	{		
+	{	
+		//Assign RT, RD, Shift Amount by using shifts then anding the last 5 bits	
 		unsigned int rt = ((memoryDataRegister >> 16) & 0b00000000000000000000000000011111);
 		unsigned int rd = ((memoryDataRegister >> 11) & 0b00000000000000000000000000011111);
 		unsigned int sa = ((memoryDataRegister >> 6) & 0b00000000000000000000000000011111);
-
+		//Perform right shift
 		registers[rd] = registers[rt] >> sa;
 	}
 }
@@ -254,6 +260,7 @@ void iTypeInstruction()
 	//ADDI Instruction
 	if((memoryDataRegister & 0b11111100000000000000000000000000) == 0b00100000000000000000000000000000)
 	{		
+		//Assign RS and RT using right shift then anding the lat 5 bits
 		unsigned int rs = ((memoryDataRegister >> 21) & 0b00000000000000000000000000011111);
 		unsigned int rt = ((memoryDataRegister >> 16) & 0b00000000000000000000000000011111);
 
@@ -266,13 +273,14 @@ void iTypeInstruction()
 	//BNE INSTRUCTION
 	else if((memoryDataRegister & 0b11111100000000000000000000000000) == 0b00010100000000000000000000000000)
 	{		
+		//Assign RS and RT using right shift then anding the lat 5 bits
 		unsigned int rs = ((memoryDataRegister >> 21) & 0b00000000000000000000000000011111);
 		unsigned int rt = ((memoryDataRegister >> 16) & 0b00000000000000000000000000011111);
 
 		//Set offset Value
 		int offset = (memoryDataRegister & 0b00000000000000001111111111111111);
 		
-		//RT = RS + IMMEDIATE
+		//IF RT != RS Branch to program counter + offset
 		if(registers[rt] != registers[rs])
 		{
 			realPC -= (offset ^ 0b00000000000000001111111111111111)+1;
@@ -281,25 +289,27 @@ void iTypeInstruction()
 	//ANDI INSTRUCTION
 	else if((memoryDataRegister & 0b11111100000000000000000000000000) == 0b00110000000000000000000000000000)
 	{		
+		//Assign RS and RT using right shift then anding the lat 5 bits
 		unsigned int rs = ((memoryDataRegister >> 21) & 0b00000000000000000000000000011111);
 		unsigned int rt = ((memoryDataRegister >> 16) & 0b00000000000000000000000000011111);
 
 		//Set immediate Value
 		unsigned int immediate = (memoryDataRegister & 0b00000000000000001111111111111111);
 		
-		//RT = RS + IMMEDIATE
+		//RT = RS & IMMEDIATE
 		registers[rt] = registers[rs] & immediate;
 	}
 	//BEQ INSTRUCTION
 	else
 	{		
+		//Assign RS and RT using right shift then anding the lat 5 bits
 		unsigned int rs = ((memoryDataRegister >> 21) & 0b00000000000000000000000000011111);
 		unsigned int rt = ((memoryDataRegister >> 16) & 0b00000000000000000000000000011111);
 
 		//Set offset Value
 		int offset = (memoryDataRegister & 0b00000000000000001111111111111111);
 		
-		//IF EQUAL BRANCH
+		//IF EQUAL BRANCH TO PROGRAM COUNTER + OFFSET
 		if(registers[rt] == registers[rs])
 		{
 			realPC+=offset;
@@ -350,15 +360,11 @@ int exec_bytecode(){
         	controlUnit();
         }       
 
-
        //print_registers(); // print out the state of registers at the end of execution
         print_registers();
         printf("... DONE!\n");
         return(0);
 }
-
-
-
 
 int load_program(){
        int j=0;
@@ -388,7 +394,6 @@ int load_program(){
 
        return(0);
 }
-
 
 int main(){
 	if (load_program()<0) 	return(-1);        
