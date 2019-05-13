@@ -45,7 +45,7 @@ int print_registers(){
 	for(i=0;i<MAX_REGISTER;i++){
 		printf(" %d: %d\n", i, registers[i]); 
 	}
-	printf(" Program Counter: 0x%08x\n",ADDR_TEXT + 4*(realPC-1));
+	printf(" Program Counter: 0x%08x\n",ADDR_TEXT + 4*realPC);
 	return(0);
 }
 
@@ -216,54 +216,14 @@ int currentInstructionRegister;
 int memoryAddressRegister;
 int memoryDataRegister;
 
-int findRS()
-{
-	int rs = 0;
-	for(int i = 0; i < 32; i++)
-	{
-		if(((memoryDataRegister >> 21) & 0b00000000000000000000000000011111)== i)
-		{
-			rs = i;
-		}	
-	}
-	return rs;
-}
-
-
-int findRT()
-{
-	int rt =  0;
-	for(int i = 0; i < 32; i++)
-	{
-		if(((memoryDataRegister >> 16) & 0b00000000000000000000000000011111)== i)
-		{
-			rt = i;
-		}	
-	}
-	return rt;
-}
-
-
-int findRD()
-{
-	int rd = 0;
-	for(int i = 0; i < 32; i++)
-	{
-		if(((memoryDataRegister >> 11) & 0b00000000000000000000000000011111)== i)
-		{
-			rd = i;
-		}	
-	}
-	return rd;
-}
 //R TYPE
 void rTypeInstruction()
 {
 	//SHIFT LEFT INSTRUCTION
 	if((memoryDataRegister & 0b00000000000000000000000000111111) == 0)
 	{		
-		unsigned int rt = findRT();
-		unsigned int rd = findRD();
+		unsigned int rt = ((memoryDataRegister >> 16) & 0b00000000000000000000000000011111);
+		unsigned int rd = ((memoryDataRegister >> 11) & 0b00000000000000000000000000011111);
 		unsigned int sa = ((memoryDataRegister >> 6) & 0b00000000000000000000000000011111);
 
 		registers[rd] = registers[rt] << sa;
@@ -271,17 +231,17 @@ void rTypeInstruction()
 	//ADD INSTRUCTION
 	else if((memoryDataRegister & 0b00000000000000000000000000111111) == 0b00000000000000000000000000100000)
 	{		
-		unsigned int rs = findRS();
-		unsigned int rt = findRT();
-		unsigned int rd = findRD();
+		unsigned int rs = ((memoryDataRegister >> 21) & 0b00000000000000000000000000011111);
+		unsigned int rt = ((memoryDataRegister >> 16) & 0b00000000000000000000000000011111);
+		unsigned int rd = ((memoryDataRegister >> 11) & 0b00000000000000000000000000011111);
 		
 		registers[rd] = registers[rs] + registers[rt];
 	}
 	//SHIFT RIGHT INSTRUCTION
 	else
 	{		
-		unsigned int rt = findRT();
-		unsigned int rd = findRD();
+		unsigned int rt = ((memoryDataRegister >> 16) & 0b00000000000000000000000000011111);
+		unsigned int rd = ((memoryDataRegister >> 11) & 0b00000000000000000000000000011111);
 		unsigned int sa = ((memoryDataRegister >> 6) & 0b00000000000000000000000000011111);
 
 		registers[rd] = registers[rt] >> sa;
@@ -294,8 +254,8 @@ void iTypeInstruction()
 	//ADDI Instruction
 	if((memoryDataRegister & 0b11111100000000000000000000000000) == 0b00100000000000000000000000000000)
 	{		
-		unsigned int rs = findRS();
-		unsigned int rt = findRT();
+		unsigned int rs = ((memoryDataRegister >> 21) & 0b00000000000000000000000000011111);
+		unsigned int rt = ((memoryDataRegister >> 16) & 0b00000000000000000000000000011111);
 
 		//Set immediate Value
 		unsigned int immediate = (memoryDataRegister & 0b00000000000000001111111111111111);
@@ -306,8 +266,8 @@ void iTypeInstruction()
 	//BNE INSTRUCTION
 	else if((memoryDataRegister & 0b11111100000000000000000000000000) == 0b00010100000000000000000000000000)
 	{		
-		unsigned int rs = findRS();
-		unsigned int rt = findRT();
+		unsigned int rs = ((memoryDataRegister >> 21) & 0b00000000000000000000000000011111);
+		unsigned int rt = ((memoryDataRegister >> 16) & 0b00000000000000000000000000011111);
 
 		//Set offset Value
 		int offset = (memoryDataRegister & 0b00000000000000001111111111111111);
@@ -321,8 +281,8 @@ void iTypeInstruction()
 	//ANDI INSTRUCTION
 	else if((memoryDataRegister & 0b11111100000000000000000000000000) == 0b00110000000000000000000000000000)
 	{		
-		unsigned int rs = findRS();
-		unsigned int rt = findRT();
+		unsigned int rs = ((memoryDataRegister >> 21) & 0b00000000000000000000000000011111);
+		unsigned int rt = ((memoryDataRegister >> 16) & 0b00000000000000000000000000011111);
 
 		//Set immediate Value
 		unsigned int immediate = (memoryDataRegister & 0b00000000000000001111111111111111);
@@ -333,8 +293,8 @@ void iTypeInstruction()
 	//BEQ INSTRUCTION
 	else
 	{		
-		unsigned int rs = findRS();
-		unsigned int rt = findRT();
+		unsigned int rs = ((memoryDataRegister >> 21) & 0b00000000000000000000000000011111);
+		unsigned int rt = ((memoryDataRegister >> 16) & 0b00000000000000000000000000011111);
 
 		//Set offset Value
 		int offset = (memoryDataRegister & 0b00000000000000001111111111111111);
@@ -436,4 +396,3 @@ int main(){
 	if (exec_bytecode()<0) 	return(-1); 
    	return(0);
 }
-
