@@ -45,7 +45,7 @@ int print_registers(){
 	for(i=0;i<MAX_REGISTER;i++){
 		printf(" %d: %d\n", i, registers[i]); 
 	}
-	printf(" Program Counter: 0x%08x\n",ADDR_TEXT + 4*realPC);
+	printf(" Program Counter: 0x%08x\n",ADDR_TEXT + 4*realPC); 
 	return(0);
 }
 
@@ -228,7 +228,7 @@ void rTypeInstruction()
 		//Assign RT, RD, Shift Amount by using shifts then anding the last 5 bits
 		unsigned int rt = ((memoryDataRegister >> 16) & 0b00000000000000000000000000011111);
 		unsigned int rd = ((memoryDataRegister >> 11) & 0b00000000000000000000000000011111);
-		unsigned int sa = ((memoryDataRegister >> 6) & 0b00000000000000000000000000011111);
+		unsigned int sa = ((memoryDataRegister >>  6) & 0b00000000000000000000000000011111);
 		//Perform left shift
 		registers[rd] = registers[rt] << sa;
 	}
@@ -248,7 +248,7 @@ void rTypeInstruction()
 		//Assign RT, RD, Shift Amount by using shifts then anding the last 5 bits	
 		unsigned int rt = ((memoryDataRegister >> 16) & 0b00000000000000000000000000011111);
 		unsigned int rd = ((memoryDataRegister >> 11) & 0b00000000000000000000000000011111);
-		unsigned int sa = ((memoryDataRegister >> 6) & 0b00000000000000000000000000011111);
+		unsigned int sa = ((memoryDataRegister >>  6) & 0b00000000000000000000000000011111);
 		//Perform right shift
 		registers[rd] = registers[rt] >> sa;
 	}
@@ -401,3 +401,4 @@ int main(){
 	if (exec_bytecode()<0) 	return(-1); 
    	return(0);
 }
+
