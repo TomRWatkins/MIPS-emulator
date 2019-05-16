@@ -212,8 +212,6 @@ int make_bytecode(){
    	return(0);
 }
 
-//Variable to hold contents of current instruction
-int currentInstructionRegister;
 //Variable to hold address of current instruction
 int memoryAddressRegister;
 //Variable to hold data of current instruction
@@ -283,7 +281,10 @@ void iTypeInstruction()
 		//IF RT != RS Branch to program counter + offset
 		if(registers[rt] != registers[rs])
 		{
-			realPC -= (offset ^ 0b00000000000000001111111111111111)+1;
+			//Offset is in 2s compliment form
+			offset = -offset;
+			//Program counter + the offset in non 2s compliment, flip the bits and add 1.
+			realPC += (offset ^ 0b00000000000000001111111111111111)+1;
 		} 
 	}
 	//ANDI INSTRUCTION
@@ -334,8 +335,7 @@ void controlUnit()
 //WRITE METHOD
 int exec_bytecode(){
         printf("EXECUTING PROGRAM ...\n");
-        pc = ADDR_TEXT; //set program counter to the start of our program
-        //PC+=4 to increment program counter
+        pc = ADDR_TEXT; //set program counter to the start of our program       
         
        
         //here goes the code to run the byte code
@@ -349,10 +349,7 @@ int exec_bytecode(){
         	memoryAddressRegister = realPC;
 
         	//Set memory data register to the contents of that memory address at PC (FETCHING INSTRUCTION)
-        	memoryDataRegister = text[realPC];
-
-        	//Now instruction has been fetched
-        	currentInstructionRegister = memoryDataRegister;
+        	memoryDataRegister = text[realPC]; 	
 
         	//Increment Program Counter to point at the next instrcution to be fetched
         	realPC++;
